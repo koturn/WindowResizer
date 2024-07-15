@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Loaded="Window_Loaded" Width="Auto" Height="Auto"
         ResizeMode="NoResize" SizeToContent="WidthAndHeight">
-    <Grid Margin="3,3,3,3">
+    <Grid Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" Margin="3,3,3,3">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
