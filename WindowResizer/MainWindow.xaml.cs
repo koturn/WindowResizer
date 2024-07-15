@@ -88,16 +88,27 @@ namespace WindowResizer
             var doActivate = _checkBoxActivate.IsChecked.GetValueOrDefault();
             try
             {
-                _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
-
                 if (_rbWindowBased.IsChecked.GetValueOrDefault())
                 {
+                    _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
                     WindowUtil.SetWindowSize(hWnd, (int)_nudWindowWidth.Value, (int)_nudWindowHeight.Value, doActivate);
+                }
+                else if (_rbClientBased.IsChecked.GetValueOrDefault())
+                {
+                    _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
+                    WindowUtil.SetClientSize(hWnd, (int)_nudClientWidth.Value, (int)_nudClientHeight.Value, doActivate);
+                }
+                else if (_rbMaximize.IsChecked.GetValueOrDefault())
+                {
+                    _prevWindowRect = null;
+                    WindowUtil.Maximize(hWnd);
                 }
                 else
                 {
-                    WindowUtil.SetClientSize(hWnd, (int)_nudClientWidth.Value, (int)_nudClientHeight.Value, doActivate);
+                    _prevWindowRect = null;
+                    WindowUtil.Minimize(hWnd);
                 }
+
                 if (doActivate)
                 {
                     WindowUtil.NativeMethods.SetForegroundWindow(hWnd);
@@ -121,17 +132,19 @@ namespace WindowResizer
 
         private void ButtonUndoResize_Click(object sender, RoutedEventArgs e)
         {
-            if (!_prevWindowRect.HasValue)
-            {
-                return;
-            }
-
             var p = GetSelectedProcess();
             if (p == null)
             {
                 return;
             }
             var hWnd = p.MainWindowHandle;
+
+            if (!_prevWindowRect.HasValue)
+            {
+                WindowUtil.Restore(hWnd);
+                return;
+            }
+
             var doActivate = _checkBoxActivate.IsChecked.GetValueOrDefault();
 
             var rect = _prevWindowRect.Value;

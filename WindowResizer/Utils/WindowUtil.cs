@@ -19,6 +19,8 @@ namespace WindowResizer.Utils
         /// or <see cref="NativeMethods.SetWindowPos"/> is failed.</exception>
         public static void SetWindowSize(IntPtr hWnd, int width, int height, bool doCenterResize = true, bool doActivate = true)
         {
+            Restore(hWnd);
+
             var x = 0;
             var y = 0;
             var flags = SwpFlags.NoMove;
@@ -53,6 +55,8 @@ namespace WindowResizer.Utils
         /// <see cref="NativeMethods.GetClientRect"/> or <see cref="NativeMethods.SetWindowPos"/> is failed.</exception>
         public static void SetClientSize(IntPtr hWnd, int width, int height, bool doCenterResize = true, bool doActivate = true)
         {
+            Restore(hWnd);
+
             var windowRect = GetWindowRect(hWnd);
             var clientRect = GetClientRect(hWnd);
             var windowWidth = width + windowRect.Width - clientRect.Width;
@@ -76,6 +80,45 @@ namespace WindowResizer.Utils
             if (!NativeMethods.SetWindowPos(hWnd, IntPtr.Zero, x, y, windowWidth, windowHeight, flags))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowPos failed");
+            }
+        }
+
+        /// <summary>
+        /// Display scpecified window as a maximized window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.ShowWindow(nint, CmdShow)"/> is failed.</exception>
+        public static void Maximize(IntPtr hWnd)
+        {
+            if (!NativeMethods.ShowWindow(hWnd, CmdShow.ShowMaximized))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+            }
+        }
+
+        /// <summary>
+        /// Display scpecified window as a minimized window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.ShowWindow(nint, CmdShow)"/> is failed.</exception>
+        public static void Minimize(IntPtr hWnd)
+        {
+            if (!NativeMethods.ShowWindow(hWnd, CmdShow.ShowMinimized))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+            }
+        }
+
+        /// <summary>
+        /// Activate and restore scpecified window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.ShowWindow(nint, CmdShow)"/> is failed.</exception>
+        public static void Restore(IntPtr hWnd)
+        {
+            if (!NativeMethods.ShowWindow(hWnd, CmdShow.Restore))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
             }
         }
 
@@ -265,6 +308,39 @@ namespace WindowResizer.Utils
             /// </remarks>
             [DllImport("user32.dll", SetLastError = true)]
             public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+            /// <summary>
+            /// Sets the specified window's show state.
+            /// </summary>
+            /// <param name="hWnd">A handle to the window.</param>
+            /// <param name="cmdShow">
+            /// Controls how the window is to be shown.
+            /// This parameter is ignored the first time an application calls <see cref="ShowWindow"/>, if the program that launched the application provides a STARTUPINFO structure.
+            /// Otherwise, the first time <see cref="ShowWindow"/> is called, the value should be the value obtained by the WinMain function in its nCmdShow parameter.
+            /// </param>
+            /// <returns>
+            /// <para>If the window was previously visible, the return value is nonzero.</para>
+            /// <para>If the window was previously hidden, the return value is zero.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see cref="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow"/></para>
+            /// <para>To perform certain special effects when showing or hiding a window, use AnimateWindow.</para>
+            /// <para>The first time an application calls <see cref="ShowWindow"/>, it should use the WinMain function's nCmdShow parameter as its nCmdShow parameter.
+            /// Subsequent calls to <see cref="ShowWindow"/> must use one of the values in the given list, instead of the one specified by the WinMain function's nCmdShow parameter.</para>
+            /// <para>As noted in the discussion of the nCmdShow parameter, the nCmdShow value is ignored in the first call to <see cref="ShowWindow"/>
+            /// if the program that launched the application specifies startup information in the structure.
+            /// In this case, <see cref="ShowWindow"/> uses the information specified in the STARTUPINFO structure to show the window.
+            /// On subsequent calls, the application must call <see cref="ShowWindow"/> with nCmdShow set to SW_SHOWDEFAULT to use the startup information provided by the program that launched the application.
+            /// This behavior is designed for the following situations:
+            /// <list type="bullet">
+            ///   <item>Applications create their main window by calling CreateWindow with the WS_VISIBLE flag set.</item>
+            ///   <item>Applications create their main window by calling CreateWindow with the WS_VISIBLE flag cleared,
+            ///   and later call <see cref="ShowWindow"/> with the <see cref="CmdShow.Show"/> flag set to make it visible.</item>
+            /// </list>
+            /// </para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern bool ShowWindow(IntPtr hWnd, CmdShow cmdShow);
         }
     }
 }
