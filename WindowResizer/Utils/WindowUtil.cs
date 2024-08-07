@@ -167,8 +167,11 @@ namespace WindowResizer.Utils
 
             try
             {
+                var hMonitor = MonitorFromWindow(hWnd);
+                var monitorInfo = GetMonitorInfo(hMonitor);
+                var screenRect = monitorInfo.RectMonitor;
+
                 var prevWindowStyle = SetWindow(hWnd, 0x10000000 | 0x80000000);
-                var screenRect = System.Windows.Forms.Screen.FromHandle(hWnd).Bounds;
                 MoveWindow(hWnd, screenRect.X, screenRect.Y, screenRect.Width, screenRect.Height, true);
                 return prevWindowStyle;
             }
@@ -244,6 +247,39 @@ namespace WindowResizer.Utils
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "SetMenu failed");
             }
+        }
+
+        /// <summary>
+        /// Retrieves a handle to the display monitor that has the largest area of intersection with the bounding rectangle of a specified window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window of interest.</param>
+        /// <param name="flag">Determines the function's return value if the window does not intersect any display monitor.</param>
+        /// <returns>A handle to the monitor.</returns>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.MonitorFromWindow(IntPtr, MonitorDefaultFlags)"/> is failed.</exception>
+        public static IntPtr MonitorFromWindow(IntPtr hWnd, MonitorDefaultFlags flag = MonitorDefaultFlags.ToNearest)
+        {
+            var hMonitor = NativeMethods.MonitorFromWindow(hWnd, flag);
+            if (hMonitor == IntPtr.Zero)
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "MonitorFromWindow failed");
+            }
+            return hMonitor;
+        }
+
+        /// <summary>
+        /// Retrieves information about a display monitor.
+        /// </summary>
+        /// <param name="hMonitor">A handle to the display monitor of interest.</param>
+        /// <returns>Monitor information.</returns>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.GetMonitorInfo(nint, ref MonitorInfo)"/> is failed.</exception>
+        public static MonitorInfo GetMonitorInfo(IntPtr hMonitor)
+        {
+            var monitorInfo = MonitorInfo.Create();
+            if (!NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "GetMonitorInfo failed");
+            }
+            return monitorInfo;
         }
 
         /// <summary>
@@ -556,6 +592,51 @@ namespace WindowResizer.Utils
             /// </remarks>
             [DllImport("user32.dll", SetLastError = true)]
             public static extern bool SetMenu(IntPtr hWnd, IntPtr hMenu);
+
+            /// <summary>
+            /// The <see cref="MonitorFromWindow(nint, MonitorDefaultFlags)"/> function retrieves a handle
+            /// to the display monitor that has the largest area of intersection with the bounding rectangle of a specified window.
+            /// </summary>
+            /// <param name="hWnd">A handle to the window of interest.</param>
+            /// <param name="flag">
+            /// <para>Determines the function's return value if the window does not intersect any display monitor.</para>
+            /// <para>This parameter can be one of the <see cref="MonitorDefaultFlags"/> values.</para>
+            /// </param>
+            /// <returns>
+            /// <para>If the window intersects one or more display monitor rectangles,
+            /// the return value is an HMONITOR handle to the display monitor that has the largest area of intersection with the window.</para>
+            /// <para>If the window does not intersect a display monitor, the return value depends on the value of <paramref name="flag"/>.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-monitorfromwindow"/></para>
+            /// <para>If the window is currently minimized, <see cref="MonitorFromWindow(nint, MonitorDefaultFlags)"/> uses
+            /// the rectangle of the window before it was minimized.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern IntPtr MonitorFromWindow(IntPtr hWnd, MonitorDefaultFlags flag);
+
+            /// <summary>
+            /// The <see cref="GetMonitorInfo(nint, ref MonitorInfo)"/> function retrieves information about a display monitor.
+            /// </summary>
+            /// <param name="hMonitor">A handle to the display monitor of interest.</param>
+            /// <param name="pMonitorInfo">
+            /// <para>A pointer to a <see cref="MonitorInfo"/> or MONITORINFOEX structure that receives information about the specified display monitor.</para>
+            /// <para>You must set the cbSize member of the structure to sizeof(MONITORINFO) or sizeof(MONITORINFOEX)
+            /// before calling the <see cref="GetMonitorInfo(nint, ref MonitorInfo)"/> function.
+            /// Doing so lets the function determine the type of structure you are passing to it.</para>
+            /// <para>The MONITORINFOEX structure is a superset of the <see cref="MonitorInfo"/> structure.
+            /// It has one additional member: a string that contains a name for the display monitor.
+            /// Most applications have no use for a display monitor name, and so can save some bytes by using a <see cref="MonitorInfo"/> structure.</para>
+            /// </param>
+            /// <returns>
+            /// <para>If the function succeeds, the return value is true.</para>
+            /// <para>If the function fails, the return value is false.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmonitorinfow"/></para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+            public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo monitorInfo);
         }
     }
 }
