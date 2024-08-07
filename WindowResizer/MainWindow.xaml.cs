@@ -16,6 +16,8 @@ namespace WindowResizer
     public partial class MainWindow : Window
     {
         private WindowRect? _prevWindowRect;
+        private IntPtr? _prevMenu;
+        private nuint? _prevWindowStyle;
 
         private Task<Process[]>? _initGetProcessTask;
 
@@ -84,7 +86,25 @@ namespace WindowResizer
             {
                 return;
             }
+
             var hWnd = p.MainWindowHandle;
+
+            if (_prevWindowStyle.HasValue)
+            {
+                WindowUtil.SetWindow(hWnd, _prevWindowStyle.Value);
+                _prevWindowStyle = null;
+
+                if (_prevWindowRect != null)
+                {
+                    var rect = _prevWindowRect.Value;
+                    WindowUtil.MoveWindow(hWnd, rect.X, rect.Y, rect.Width, rect.Height, true);
+                }
+            }
+            if (_prevMenu.HasValue)
+            {
+                WindowUtil.SetMenu(hWnd, _prevMenu.Value);
+            }
+
             var doActivate = _checkBoxActivate.IsChecked.GetValueOrDefault();
             try
             {
@@ -103,19 +123,28 @@ namespace WindowResizer
                     _prevWindowRect = null;
                     WindowUtil.Maximize(hWnd);
                 }
-                else
+                else if (_rbMinimize.IsChecked.GetValueOrDefault())
                 {
                     _prevWindowRect = null;
                     WindowUtil.Minimize(hWnd);
                 }
+                else
+                {
+                    _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
+                    _prevWindowStyle = WindowUtil.MakeFullscreen(hWnd, out var prevMenu);
+                    _prevMenu = prevMenu;
+                }
 
                 if (doActivate)
                 {
-                    WindowUtil.NativeMethods.SetForegroundWindow(hWnd);
+                    WindowUtil.SetForegroundWindow(hWnd);
                 }
 
-                RefreshWindowSizeNud(hWnd);
-                RefreshClientSizeNud(hWnd);
+                if (!_prevWindowStyle.HasValue)
+                {
+                    RefreshWindowSizeNud(hWnd);
+                    RefreshClientSizeNud(hWnd);
+                }
 
                 _buttonUndoResize.IsEnabled = true;
             }
@@ -138,6 +167,16 @@ namespace WindowResizer
                 return;
             }
             var hWnd = p.MainWindowHandle;
+
+            if (_prevWindowStyle.HasValue)
+            {
+                WindowUtil.SetWindow(hWnd, _prevWindowStyle.Value);
+                _prevWindowStyle = null;
+            }
+            if (_prevMenu.HasValue)
+            {
+                WindowUtil.SetMenu(hWnd, _prevMenu.Value);
+            }
 
             if (!_prevWindowRect.HasValue)
             {

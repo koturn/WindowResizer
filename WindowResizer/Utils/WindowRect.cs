@@ -41,5 +41,13 @@ namespace WindowResizer.Utils
         /// Height of rectangle.
         /// </summary>
         public int Height => Bottom - Top;
+
+        public WindowRect(int left, int top, int right, int bottom)
+        {
+            Left = left;
+            Top = top;
+            Right = right;
+            Bottom = bottom;
+        }
     }
 }

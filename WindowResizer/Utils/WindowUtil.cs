@@ -5,8 +5,29 @@ using System.Runtime.InteropServices;
 
 namespace WindowResizer.Utils
 {
+    /// <summary>
+    /// Provides utility methods for window.
+    /// </summary>
     public class WindowUtil
     {
+        /// <summary>
+        /// Changes the position and dimensions of the specified window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <param name="x">The new position of the left side of the window.</param>
+        /// <param name="y">The new position of the top of the window.</param>
+        /// <param name="width">The new width of the window.</param>
+        /// <param name="height">The new height of the window.</param>
+        /// <param name="doRepaint">Indicates whether the window is to be repainted.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.MoveWindow(IntPtr, int, int, int, int, bool)"/> is failed.</exception>
+        public static void MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool doRepaint)
+        {
+            if (!NativeMethods.MoveWindow(hWnd, x, y, width, height, doRepaint))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "MoveWindow failed");
+            }
+        }
+
         /// <summary>
         /// Set window size.
         /// </summary>
@@ -110,6 +131,55 @@ namespace WindowResizer.Utils
         }
 
         /// <summary>
+        /// Display scpecified window as fullscreen.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.ShowWindow(nint, CmdShow)"/> is failed.</exception>
+        public static nuint SetWindow(IntPtr hWnd, nuint style)
+        {
+            var oldStyle = NativeMethods.SetWindowLongPtr(hWnd, (int)GwlIndice.Style, style);
+            if (oldStyle == 0)
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+            }
+            return oldStyle;
+        }
+
+        public static void SetForegroundWindow(IntPtr hWnd)
+        {
+            if (!NativeMethods.SetForegroundWindow(hWnd))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetForegroundWindow failed");
+            }
+        }
+
+        /// <summary>
+        /// Display scpecified window as fullscreen.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.ShowWindow(nint, CmdShow)"/> is failed.</exception>
+        public static nuint MakeFullscreen(IntPtr hWnd, out IntPtr hPrevMenu)
+        {
+            Restore(hWnd);
+
+            hPrevMenu = GetMenu(hWnd);
+            SetMenu(hWnd, IntPtr.Zero);
+
+            try
+            {
+                var prevWindowStyle = SetWindow(hWnd, 0x10000000 | 0x80000000);
+                var screenRect = System.Windows.Forms.Screen.FromHandle(hWnd).Bounds;
+                MoveWindow(hWnd, screenRect.X, screenRect.Y, screenRect.Width, screenRect.Height, true);
+                return prevWindowStyle;
+            }
+            catch
+            {
+                SetMenu(hWnd, hPrevMenu);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Activate and restore scpecified window.
         /// </summary>
         /// <param name="hWnd">A handle to the window.</param>
@@ -150,6 +220,30 @@ namespace WindowResizer.Utils
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "GetClientRect failed");
             }
             return clientRect;
+        }
+
+        /// <summary>
+        /// Retrieves a handle to the menu assigned to the specified window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window whose menu handle is to be retrieved.</param>
+        /// <returns>Handle to the menu.</returns>
+        public static IntPtr GetMenu(IntPtr hWnd)
+        {
+            return NativeMethods.GetMenu(hWnd);
+        }
+
+        /// <summary>
+        /// Assigns a new menu to the specified window.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window to which the menu is to be assigned.</param>
+        /// <param name="hMenu">A handle to the new menu. If this parameter is NULL, the window's current menu is removed.</param>
+        /// <exception cref="Win32Exception">Thrown when <see cref="NativeMethods.GetMenu(IntPtr)"/> is failed.</exception>
+        public static void SetMenu(IntPtr hWnd, IntPtr hMenu)
+        {
+            if (!NativeMethods.SetMenu(hWnd, hMenu))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetMenu failed");
+            }
         }
 
         /// <summary>
@@ -323,7 +417,7 @@ namespace WindowResizer.Utils
             /// <para>If the window was previously hidden, the return value is zero.</para>
             /// </returns>
             /// <remarks>
-            /// <para><see cref="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow"/></para>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow"/></para>
             /// <para>To perform certain special effects when showing or hiding a window, use AnimateWindow.</para>
             /// <para>The first time an application calls <see cref="ShowWindow"/>, it should use the WinMain function's nCmdShow parameter as its nCmdShow parameter.
             /// Subsequent calls to <see cref="ShowWindow"/> must use one of the values in the given list, instead of the one specified by the WinMain function's nCmdShow parameter.</para>
@@ -341,6 +435,127 @@ namespace WindowResizer.Utils
             /// </remarks>
             [DllImport("user32.dll", SetLastError = true)]
             public static extern bool ShowWindow(IntPtr hWnd, CmdShow cmdShow);
+
+            /// <summary>
+            /// Changes the position and dimensions of the specified window.
+            /// For a top-level window, the position and dimensions are relative to the upper-left corner of the screen.
+            /// For a child window, they are relative to the upper-left corner of the parent window's client area.
+            /// </summary>
+            /// <param name="hWnd">A handle to the window.</param>
+            /// <param name="x">The new position of the left side of the window.</param>
+            /// <param name="y">The new position of the top of the window.</param>
+            /// <param name="width">The new width of the window.</param>
+            /// <param name="height">The new height of the window.</param>
+            /// <param name="doRepaint">
+            /// Indicates whether the window is to be repainted.
+            /// If this parameter is true, the window receives a message.
+            /// If the parameter is false, no repainting of any kind occurs.
+            /// This applies to the client area, the nonclient area (including the title bar and scroll bars),
+            /// and any part of the parent window uncovered as a result of moving a child window.</param>
+            /// <returns>
+            /// <para>If the function succeeds, the return value is true.</para>
+            /// <para>If the function fails, the return value is false.
+            /// To get extended error information, call <see cref="Marshal.GetLastWin32Error"/>.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-movewindow"/></para>
+            /// <para>If the <paramref name="doRepaint"/> parameter is true,
+            /// the system sends the WM_PAINT message to the window procedure immediately after moving the window
+            /// (that is, the MoveWindow function calls the UpdateWindow function).
+            /// If <paramref name="doRepaint"/> is false, the application must explicitly invalidate
+            /// or redraw any parts of the window and parent window that need redrawing.</para>
+            /// <para><see cref="MoveWindow(IntPtr, int, int, int, int, bool)"/> sends the WM_WINDOWPOSCHANGING, WM_WINDOWPOSCHANGED, WM_MOVE, WM_SIZE,
+            /// and WM_NCCALCSIZE messages to the window.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool doRepaint);
+
+            /// <summary>
+            /// Changes an attribute of the specified window. The function also sets a value at the specified offset in the extra window memory.
+            /// </summary>
+            /// <param name="hWnd">
+            /// A handle to the window and, indirectly, the class to which the window belongs.
+            /// The <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> function fails if the process that owns the window specified
+            /// by the hWnd parameter is at a higher process privilege in the UIPI hierarchy than the process the calling thread resides in.</param>
+            /// <param name="nIndex">
+            /// The zero-based offset to the value to be set.
+            /// Valid values are in the range zero through the number of bytes of extra window memory, minus the size of a LONG_PTR.
+            /// To set any other value, specify one of the <see cref="GwlIndice"/> values.</param>
+            /// <param name="dwNewLong">The replacement value.</param>
+            /// <returns>
+            /// <para>If the function succeeds, the return value is the previous value of the specified offset.</para>
+            /// <para>If the function fails, the return value is zero. To get extended error information, call <see cref="Marshal.GetLastWin32Error"/>.</para>
+            /// <para>If the previous value is zero and the function succeeds,
+            /// the return value is zero, but the function does not clear the last error information.
+            /// To determine success or failure, clear the last error information by calling SetLastError with 0, then call <see cref="SetWindowLongPtr(nint, int, nuint)"/>.
+            /// Function failure will be indicated by a return value of zero and a <see cref="Marshal.GetLastWin32Error"/> result that is nonzero.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowlongptra"/></para>
+            /// <para>Certain window data is cached, so changes you make using <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/>
+            /// will not take effect until you call the <see cref="SetWindowPos(IntPtr, IntPtr, int, int, int, int, SwpFlags)"/> function.</para>
+            /// <para>If you use <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> with the <see cref="GwlIndice.WndProc"/> index
+            /// to replace the window procedure, the window procedure must conform to the guidelines specified
+            /// in the description of the WindowProc callback function.
+            /// </para>
+            /// <para>If you use <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> with the <see cref="GwlIndice.MsgResult"/> index
+            /// to set the return value for a message processed by a dialog box procedure,
+            /// the dialog box procedure should return TRUE directly afterward.
+            /// Otherwise, if you call any function that results in your dialog box procedure receiving a window message,
+            /// the nested window message could overwrite the return value you set by using <see cref="GwlIndice.MsgResult"/>.</para>
+            /// <para>Calling <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> with the <see cref="GwlIndice.WndProc"/> index
+            /// creates a subclass of the window class used to create the window.
+            /// An application can subclass a system class, but should not subclass a window class created by another process.
+            /// The <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> function creates the window subclass by changing the window procedure
+            /// associated with a particular window class, causing the system to call the new window procedure instead of the previous one.
+            /// An application must pass any messages not processed by the new window procedure to the previous window procedure by calling CallWindowProc.
+            /// This allows the application to create a chain of window procedures.</para>
+            /// <para>Reserve extra window memory by specifying a nonzero value in the cbWndExtra member
+            /// of the WNDCLASSEX structure used with the RegisterClassEx function.</para>
+            /// <para>Do not call <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> with the <see cref="GwlIndice.HWndParent"/> index
+            /// to change the parent of a child window.
+            /// Instead, use the SetParent function.</para>
+            /// <para>If the window has a class style of CS_CLASSDC or CS_PARENTDC, do not set the extended window styles WS_EX_COMPOSITED or WS_EX_LAYERED.</para>
+            /// <para>Calling <see cref="SetWindowLongPtr(IntPtr, int, nuint)"/> to set the style on a progressbar will reset its position.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+            public static extern nuint SetWindowLongPtr(IntPtr hWnd, int nIndex, nuint dwNewLong);
+
+            /// <summary>
+            /// Retrieves a handle to the menu assigned to the specified window.
+            /// </summary>
+            /// <param name="hWnd">A handle to the window whose menu handle is to be retrieved.</param>
+            /// <returns>The return value is a handle to the menu.
+            /// If the specified window has no menu, the return value is <see cref="IntPtr.Zero"/>.
+            /// If the window is a child window, the return value is undefined.</returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getmenu"/></para>
+            /// <para><see cref="GetMenu(IntPtr)"/> does not work on floating menu bars.
+            /// Floating menu bars are custom controls that mimic standard menus; they are not menus.
+            /// To get the handle on a floating menu bar, use the Active Accessibility APIs.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern IntPtr GetMenu(IntPtr hWnd);
+
+            /// <summary>
+            /// Assigns a new menu to the specified window.
+            /// </summary>
+            /// <param name="hWnd">A handle to the window to which the menu is to be assigned.</param>
+            /// <param name="hMenu">A handle to the new menu. If this parameter is NULL, the window's current menu is removed.</param>
+            /// <returns>
+            /// <para>If the function succeeds, the return value is true.</para>
+            /// <para>If the function fails, the return value is false.
+            /// To get extended error information, call <see cref="Marshal.GetLastWin32Error"/>.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/ja-jp/windows/win32/api/winuser/nf-winuser-setmenu"/></para>
+            /// <para>The window is redrawn to reflect the menu change.
+            /// A menu can be assigned to any window that is not a child window.</para>
+            /// <para>The <see cref="SetMenu(IntPtr, IntPtr)"/> function replaces the previous menu, if any, but it does not destroy it.
+            /// An application should call the DestroyMenu function to accomplish this task.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern bool SetMenu(IntPtr hWnd, IntPtr hMenu);
         }
     }
 }

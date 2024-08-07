@@ -40,6 +40,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -71,6 +72,7 @@
 
             <RadioButton x:Name="_rbMaximize" Content="Maximize" Grid.Row="2" Grid.Column="0" GroupName="ResizeBase" VerticalAlignment="Center" Margin="0,9,0,9"/>
             <RadioButton x:Name="_rbMinimize" Content="Minimize" Grid.Row="3" Grid.Column="0" GroupName="ResizeBase" VerticalAlignment="Center" Margin="0,9,0,12"/>
+            <RadioButton x:Name="_rbFullscreen" Content="Fullscreen" Grid.Row="4" Grid.Column="0" GroupName="ResizeBase" VerticalAlignment="Center" Margin="0,9,0,12"/>
         </Grid>
         <CheckBox x:Name="_checkBoxActivate" Content="Activate on resize" IsChecked="true" Grid.Row="2" Margin="3,3,3,3"/>
         <Button Content="Resize" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="ButtonResize_Click" Margin="3,3,3,3"/>
