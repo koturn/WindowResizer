@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 
@@ -24,7 +25,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.MoveWindow(hWnd, x, y, width, height, doRepaint))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "MoveWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.MoveWindow) + " failed");
             }
         }
 
@@ -60,7 +61,7 @@ namespace WindowResizer.Utils
 
             if (!NativeMethods.SetWindowPos(hWnd, IntPtr.Zero, x, y, width, height, flags))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowPos failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.SetWindowPos) + " failed");
             }
         }
 
@@ -100,7 +101,7 @@ namespace WindowResizer.Utils
 
             if (!NativeMethods.SetWindowPos(hWnd, IntPtr.Zero, x, y, windowWidth, windowHeight, flags))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetWindowPos failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.SetWindowPos) + " failed");
             }
         }
 
@@ -113,7 +114,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.ShowWindow(hWnd, CmdShow.ShowMaximized))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.ShowWindow) + " failed");
             }
         }
 
@@ -126,7 +127,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.ShowWindow(hWnd, CmdShow.ShowMinimized))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.ShowWindow) + " failed");
             }
         }
 
@@ -140,7 +141,7 @@ namespace WindowResizer.Utils
             var oldStyle = NativeMethods.SetWindowLongPtr(hWnd, (int)GwlIndice.Style, style);
             if (oldStyle == 0)
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.SetWindowLongPtr) + " failed");
             }
             return oldStyle;
         }
@@ -149,7 +150,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.SetForegroundWindow(hWnd))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetForegroundWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.SetForegroundWindow) + " failed");
             }
         }
 
@@ -191,7 +192,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.ShowWindow(hWnd, CmdShow.Restore))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "ShowWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.ShowWindow) + " failed");
             }
         }
 
@@ -205,7 +206,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.GetWindowRect(hWnd, out var windowRect))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "GetWindowRect failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.GetWindowRect) + " failed");
             }
             return windowRect;
         }
@@ -220,7 +221,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.GetClientRect(hWnd, out var clientRect))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "GetClientRect failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.GetClientRect) + " failed");
             }
             return clientRect;
         }
@@ -245,7 +246,7 @@ namespace WindowResizer.Utils
         {
             if (!NativeMethods.SetMenu(hWnd, hMenu))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "SetMenu failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.SetMenu) + " failed");
             }
         }
 
@@ -261,7 +262,7 @@ namespace WindowResizer.Utils
             var hMonitor = NativeMethods.MonitorFromWindow(hWnd, flag);
             if (hMonitor == IntPtr.Zero)
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "MonitorFromWindow failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.MonitorFromWindow) + " failed");
             }
             return hMonitor;
         }
@@ -277,9 +278,32 @@ namespace WindowResizer.Utils
             var monitorInfo = MonitorInfo.Create();
             if (!NativeMethods.GetMonitorInfo(hMonitor, ref monitorInfo))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "GetMonitorInfo failed");
+                ThrowLastWin32Exception(nameof(NativeMethods.GetMonitorInfo) + " failed");
             }
             return monitorInfo;
+        }
+
+        /// <summary>
+        /// Throw <see cref="Win32Exception"/> associated with last Win32 error.
+        /// </summary>
+        /// <param name="message">A detailed description of the error.</param>
+        /// <exception cref="Win32Exception">Always thrown.</exception>
+        [DoesNotReturn]
+        private static void ThrowLastWin32Exception(string message)
+        {
+            ThrowWin32Exception(Marshal.GetLastWin32Error(), message);
+        }
+
+        /// <summary>
+        /// Throw <see cref="Win32Exception"/>.
+        /// </summary>
+        /// <param name="error">The Win32 error code associated with this exception.</param>
+        /// <param name="message">A detailed description of the error.</param>
+        /// <exception cref="Win32Exception">Always thrown.</exception>
+        [DoesNotReturn]
+        private static void ThrowWin32Exception(int error, string message)
+        {
+            throw new Win32Exception(error, message);
         }
 
         /// <summary>
