@@ -9,7 +9,7 @@ namespace WindowResizer.Utils
     /// <summary>
     /// Provides utility methods for window.
     /// </summary>
-    public class WindowUtil
+    public static class WindowUtil
     {
         /// <summary>
         /// Changes the position and dimensions of the specified window.
