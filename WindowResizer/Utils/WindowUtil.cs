@@ -172,7 +172,7 @@ namespace WindowResizer.Utils
                 var monitorInfo = GetMonitorInfo(hMonitor);
                 var screenRect = monitorInfo.RectMonitor;
 
-                var prevWindowStyle = SetWindow(hWnd, 0x10000000 | 0x80000000);
+                var prevWindowStyle = SetWindow(hWnd, (uint)(WindowStyleFlags.Visible | WindowStyleFlags.Popup));
                 MoveWindow(hWnd, screenRect.X, screenRect.Y, screenRect.Width, screenRect.Height, true);
                 return prevWindowStyle;
             }
