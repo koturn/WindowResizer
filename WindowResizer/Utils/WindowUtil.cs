@@ -303,7 +303,7 @@ namespace WindowResizer.Utils
         [DoesNotReturn]
         private static void ThrowWin32Exception(int error, string message)
         {
-            throw new Win32Exception(error, message);
+            throw new Win32Exception(error, $"{message}; [0x{error:X08}] {Marshal.GetPInvokeErrorMessage(error)}");
         }
 
         /// <summary>
