@@ -1,8 +1,11 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using WindowResizer.Utils;
+
 
 namespace WindowResizer
 {
@@ -20,10 +23,23 @@ namespace WindowResizer
         /// Register callback methods to unhandled exception handlers and start WPF application.
         /// </summary>
         [STAThread]
-        public static void Main()
+        public static void Main(string[] args)
         {
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+            foreach (var arg in args)
+            {
+                if (arg == "--debug")
+                {
+                    ConsoleUtil.AllocConsole();
+                    // ConsoleUtil.HideConsole();
+                    ConsoleUtil.DisableCloseButton();
+                    ConsoleUtil.DisableExitKeys();
+                    Console.OutputEncoding = Encoding.UTF8;
+                    break;
+                }
+            }
 
             var app = new App();
             app.InitializeComponent();

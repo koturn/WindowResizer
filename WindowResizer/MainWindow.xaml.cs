@@ -28,9 +28,14 @@ namespace WindowResizer
         {
             _initGetProcessTask = Task.Run(() =>
             {
-                return Process.GetProcesses().Where(p => p.MainWindowHandle != IntPtr.Zero).OrderBy(p => p.ProcessName).ToArray();
+                ConsoleLog.WriteLine("GetProcesses ...");
+                var procs = Process.GetProcesses().Where(p => p.MainWindowHandle != IntPtr.Zero).OrderBy(p => p.ProcessName).ToArray();
+                ConsoleLog.WriteLine("GetProcesses ... Done");
+                return procs;
             });
+            ConsoleLog.WriteLine("InitializeComponent ...");
             InitializeComponent();
+            ConsoleLog.WriteLine("InitializeComponent ... Done");
         }
 
         /// <summary>
@@ -84,6 +89,9 @@ namespace WindowResizer
             var p = GetSelectedProcess();
             if (p == null)
             {
+                _prevWindowStyle = null;
+                _prevWindowRect = null;
+                _prevMenu = null;
                 return;
             }
 
@@ -110,26 +118,37 @@ namespace WindowResizer
             {
                 if (_rbWindowBased.IsChecked.GetValueOrDefault())
                 {
-                    _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
-                    WindowUtil.SetWindowSize(hWnd, (int)_nudWindowWidth.Value, (int)_nudWindowHeight.Value, doActivate);
+                    var prevWindowRect = WindowUtil.GetWindowRect(hWnd);
+                    var width = (int)_nudWindowWidth.Value;
+                    var height = (int)_nudWindowHeight.Value;
+                    ConsoleLog.WriteLine($"Window base resize; {p.ProcessName} ({p.Id}): ({prevWindowRect.Width}, {prevWindowRect.Height}) -> ({width}, {height})");
+                    WindowUtil.SetWindowSize(hWnd, width, height, doActivate);
+                    _prevWindowRect = prevWindowRect;
                 }
                 else if (_rbClientBased.IsChecked.GetValueOrDefault())
                 {
-                    _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
+                    var prevWindowRect = WindowUtil.GetWindowRect(hWnd);
+                    var width = (int)_nudClientWidth.Value;
+                    var height = (int)_nudClientHeight.Value;
+                    ConsoleLog.WriteLine($"Client base resize; {p.ProcessName} ({p.Id}): ({prevWindowRect.Width}, {prevWindowRect.Height}) -> ({width}, {height})");
                     WindowUtil.SetClientSize(hWnd, (int)_nudClientWidth.Value, (int)_nudClientHeight.Value, doActivate);
+                    _prevWindowRect = prevWindowRect;
                 }
                 else if (_rbMaximize.IsChecked.GetValueOrDefault())
                 {
                     _prevWindowRect = null;
+                    ConsoleLog.WriteLine($"Maximize window; {p.ProcessName} ({p.Id})");
                     WindowUtil.Maximize(hWnd);
                 }
                 else if (_rbMinimize.IsChecked.GetValueOrDefault())
                 {
                     _prevWindowRect = null;
+                    ConsoleLog.WriteLine($"Minimize window; {p.ProcessName} ({p.Id})");
                     WindowUtil.Minimize(hWnd);
                 }
                 else
                 {
+                    ConsoleLog.WriteLine($"Make fullscreen window; {p.ProcessName} ({p.Id})");
                     _prevWindowRect = WindowUtil.GetWindowRect(hWnd);
                     _prevWindowStyle = WindowUtil.MakeFullscreen(hWnd, out var prevMenu);
                     _prevMenu = prevMenu;
@@ -241,7 +260,10 @@ namespace WindowResizer
         {
             await RefreshProcessesAsync(Task.Run(() =>
             {
-                return Process.GetProcesses().Where(p => p.MainWindowHandle != IntPtr.Zero).OrderBy(p => p.ProcessName).ToArray();
+                ConsoleLog.WriteLine("GetProcesses ...");
+                var procs = Process.GetProcesses().Where(p => p.MainWindowHandle != IntPtr.Zero).OrderBy(p => p.ProcessName).ToArray();
+                ConsoleLog.WriteLine("GetProcesses ... Done");
+                return procs;
             }));
         }
 
@@ -257,11 +279,14 @@ namespace WindowResizer
             comboBox.SelectionChanged -= ComboBoxProcess_SelectionChanged;
             var items = comboBox.Items;
             items.Clear();
+            ConsoleLog.WriteLine("Clear combobox");
+
             var index = -1;
             for (var i = 0; i < procs.Length; i++)
             {
                 var p = procs[i];
                 items.Add(p);
+                ConsoleLog.WriteLine($"Add process {p.ProcessName} ({p.Id})");
                 if (index == -1 && prevSelectedProc != null
                     && p.Id == prevSelectedProc.Id && p.SessionId == prevSelectedProc.SessionId && p.ProcessName == prevSelectedProc.ProcessName)
                 {

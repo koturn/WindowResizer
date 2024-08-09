@@ -155,6 +155,20 @@ namespace WindowResizer.Utils
         }
 
         /// <summary>
+        /// Sets the specified window's show state.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window.</param>
+        /// <param name="cmdShow">Controls how the window is to be shown.</param>
+        /// <returns>
+        /// <para>If the window was previously visible, the return value is false.</para>
+        /// <para>If the window was previously hidden, the return value is true.</para>
+        /// </returns>
+        public static bool ShowWindow(IntPtr hWnd, CmdShow cmdShow)
+        {
+            return NativeMethods.ShowWindow(hWnd, cmdShow);
+        }
+
+        /// <summary>
         /// Display scpecified window as fullscreen.
         /// </summary>
         /// <param name="hWnd">A handle to the window.</param>
@@ -247,6 +261,56 @@ namespace WindowResizer.Utils
             if (!NativeMethods.SetMenu(hWnd, hMenu))
             {
                 ThrowLastWin32Exception(nameof(NativeMethods.SetMenu) + " failed");
+            }
+        }
+
+        /// <summary>
+        /// Get window menu (also known as the system menu or the control menu) for copying and modifying.
+        /// </summary>
+        /// <param name="hWnd">A handle to the window that will own a copy of the window menu.</param>
+        /// <param name="doRevert">
+        /// The action to be taken.
+        /// If this parameter is false, <see cref="GetSystemMenu"/> returns a handle to the copy of the window menu currently in use.
+        /// The copy is initially identical to the window menu, but it can be modified.
+        /// If this parameter is true, <see cref="GetSystemMenu"/> resets the window menu back to the default state.
+        /// The previous window menu, if any, is destroyed.</param>
+        /// <returns>If the <paramref name="doRevert"/> parameter is false, the return value is a handle to a copy of the window menu.
+        /// If the <paramref name="doRevert"/> parameter is true, the return value is <see cref="IntPtr.Zero"/>.</returns>
+        public static IntPtr GetSystemMenu(IntPtr hWnd, bool doRevert)
+        {
+            var hMenu = NativeMethods.GetSystemMenu(hWnd, doRevert);
+            if (hMenu == IntPtr.Zero && !doRevert)
+            {
+                ThrowLastWin32Exception("GetSystemMenu failed");
+            }
+            return hMenu;
+        }
+
+        /// <summary>
+        /// Deletes a menu item or detaches a submenu from the specified menu by command.
+        /// </summary>
+        /// <param name="hMenu">A handle to the menu to be changed.</param>
+        /// <param name="syscmd">The menu item to be deleted.</param>
+        /// <exception cref="Win32Exception">Thrown then <see cref="NativeMethods.RemoveMenu(nint, uint, MenuFlags)"/> failed.</exception>
+        public static void RemoveMenu(IntPtr hMenu, SysCommand syscmd)
+        {
+            if (!NativeMethods.RemoveMenu(hMenu, (uint)syscmd, MenuFlags.ByCommand))
+            {
+                ThrowLastWin32Exception("RemoveMenu failed");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a menu item or detaches a submenu from the specified menu by position.
+        /// </summary>
+        /// <param name="hMenu">A handle to the menu to be changed.</param>
+        /// <param name="position">The menu item to be deleted.</param>
+        /// <exception cref="Win32Exception">Thrown then <see cref="NativeMethods.RemoveMenu(nint, uint, MenuFlags)"/> failed.</exception>
+        public static void RemoveMenu(IntPtr hMenu, uint position)
+        {
+            if (!NativeMethods.RemoveMenu(hMenu, position, MenuFlags.ByPosition))
+            {
+                ThrowLastWin32Exception("RemoveMenu failed");
             }
         }
 
@@ -473,8 +537,8 @@ namespace WindowResizer.Utils
             /// Otherwise, the first time <see cref="ShowWindow"/> is called, the value should be the value obtained by the WinMain function in its nCmdShow parameter.
             /// </param>
             /// <returns>
-            /// <para>If the window was previously visible, the return value is nonzero.</para>
-            /// <para>If the window was previously hidden, the return value is zero.</para>
+            /// <para>If the window was previously visible, the return value is false.</para>
+            /// <para>If the window was previously hidden, the return value is true.</para>
             /// </returns>
             /// <remarks>
             /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow"/></para>
@@ -616,6 +680,53 @@ namespace WindowResizer.Utils
             /// </remarks>
             [DllImport("user32.dll", SetLastError = true)]
             public static extern bool SetMenu(IntPtr hWnd, IntPtr hMenu);
+
+            /// <summary>
+            /// Enables the application to access the window menu (also known as the system menu or the control menu) for copying and modifying.
+            /// </summary>
+            /// <param name="hWnd">A handle to the window that will own a copy of the window menu.</param>
+            /// <param name="doRevert">
+            /// The action to be taken.
+            /// If this parameter is false, <see cref="GetSystemMenu"/> returns a handle to the copy of the window menu currently in use.
+            /// The copy is initially identical to the window menu, but it can be modified.
+            /// If this parameter is true, <see cref="GetSystemMenu"/> resets the window menu back to the default state.
+            /// The previous window menu, if any, is destroyed.</param>
+            /// <returns>If the <paramref name="doRevert"/> parameter is false, the return value is a handle to a copy of the window menu.
+            /// If the <paramref name="doRevert"/> parameter is true, the return value is <see cref="IntPtr.Zero"/>.</returns>
+            /// <remarks>
+            /// <para><seealso href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getsystemmenu"/></para>
+            /// <para>Any window that does not use the GetSystemMenu function to make its own copy of the window menu receives the standard window menu.</para>
+            /// <para>The window menu initially contains items with various identifier values,
+            /// such as <see cref="SysCommand.Close"/>, <see cref="SysCommand.Move"/>, and <see cref="SysCommand.Size"/>.</para>
+            /// <para>Menu items on the window menu send WM_SYSCOMMAND messages.</para>
+            /// <para>All predefined window menu items have identifier numbers greater than 0xF000.
+            /// If an application adds commands to the window menu, it should use identifier numbers less than 0xF000.</para>
+            /// <para>The system automatically grays items on the standard window menu, depending on the situation.
+            /// The application can perform its own checking or graying by responding to the WM_INITMENU message that is sent before any menu is displayed.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern IntPtr GetSystemMenu(IntPtr hWnd, bool doRevert);
+
+            /// <summary>
+            /// Deletes a menu item or detaches a submenu from the specified menu.
+            /// If the menu item opens a drop-down menu or submenu, <see cref="RemoveMenu(IntPtr, uint, MenuFlags)"/> does not destroy the menu or its handle,
+            /// allowing the menu to be reused.
+            /// Before this function is called, the GetSubMenu function should retrieve a handle to the drop-down menu or submenu.
+            /// </summary>
+            /// <param name="hMenu">A handle to the menu to be changed.</param>
+            /// <param name="position">The menu item to be deleted, as determined by the <paramref name="flags"/> parameter.</param>
+            /// <param name="flags">Indicates how the <paramref name="position"/> parameter is interpreted.
+            /// This parameter must be one of the values of <see cref="MenuFlags"/>.</param>
+            /// <returns>
+            /// <para>If the function succeeds, the return value is true.</para>
+            /// <para>If the function fails, the return value is false. To get extended error information, call <see cref="Marshal.GetLastWin32Error"/>.</para>
+            /// </returns>
+            /// <remarks>
+            /// <para><see href="https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-removemenu"/></para>
+            /// <para>The application must call the DrawMenuBar function whenever a menu changes, whether the menu is in a displayed window.</para>
+            /// </remarks>
+            [DllImport("user32.dll", SetLastError = true)]
+            public static extern bool RemoveMenu(IntPtr hMenu, uint position, MenuFlags flags);
 
             /// <summary>
             /// The <see cref="MonitorFromWindow(nint, MonitorDefaultFlags)"/> function retrieves a handle
